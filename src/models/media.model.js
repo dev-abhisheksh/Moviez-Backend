@@ -23,4 +23,6 @@ const mediaSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
+mediaSchema.index({ title: "text", name: "text" });
+
 export const Media = mongoose.model("Media", mediaSchema);
