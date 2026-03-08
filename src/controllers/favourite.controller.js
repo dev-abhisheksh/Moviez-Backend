@@ -1,4 +1,4 @@
-import { Favourite } from "../models/favourite.model";
+import { Favourite } from "../models/favourite.model.js";
 
 const toggleFavourite = async (req, res) => {
     try {
@@ -44,7 +44,7 @@ const getFavourites = async (req, res) => {
     }
 }
 
-const checkFavoriteStatus = async (req, res) => {
+const checkFavouriteStatus = async (req, res) => {
     try {
         const userId = req.user._id;
         const { mediaId, mediaType } = req.params;
@@ -68,5 +68,5 @@ const checkFavoriteStatus = async (req, res) => {
 export {
     toggleFavourite,
     getFavourites,
-    checkFavoriteStatus
+    checkFavouriteStatus
 }
