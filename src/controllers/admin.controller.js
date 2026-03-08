@@ -16,10 +16,20 @@ const getAllUsers = async (req, res) => {
 const banUser = async (req, res) => {
     try {
         const { userId } = req.params;
+        const { reason, durationHours } = req.body;
+
+        const banExpiresAt = durationHours
+            ? new Date(Date.now() + durationHours * 60 * 60 * 1000)
+            : null;
 
         const user = await User.findByIdAndUpdate(
             userId,
-            { isBanned: true },
+            {
+                isBanned: true,
+                banReason: reason || "Violation of platform rules",
+                bannedAt: new Date(),
+                banExpiresAt
+            },
             { new: true }
         );
 
@@ -28,7 +38,8 @@ const banUser = async (req, res) => {
         }
 
         return res.json({
-            message: "User banned successfully"
+            message: "User banned successfully",
+            user
         });
 
     } catch (error) {
