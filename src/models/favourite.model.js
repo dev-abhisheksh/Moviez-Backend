@@ -7,7 +7,7 @@ const favouriteSchema = new mongoose.Schema({
         required: true
     },
     mediaId: {
-        type: Number,   // TMDB id
+        type: String,
         required: true
     },
     mediaType: {
@@ -16,5 +16,7 @@ const favouriteSchema = new mongoose.Schema({
         required: true
     }
 }, { timestamps: true });
+
+favouriteSchema.index({ userId: 1, mediaId: 1 });
 
 export const Favourite = mongoose.model("Favourite", favouriteSchema);

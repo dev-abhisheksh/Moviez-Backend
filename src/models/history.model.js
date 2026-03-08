@@ -7,7 +7,7 @@ const historySchema = new mongoose.Schema({
         required: true
     },
     mediaId: {
-        type: Number,
+        type: String,
         required: true
     },
     mediaType: {
@@ -20,5 +20,7 @@ const historySchema = new mongoose.Schema({
         default: Date.now
     }
 });
+
+historySchema.index({ userId: 1, watchedAt: -1 });
 
 export const History = mongoose.model("WatchHistory", historySchema);

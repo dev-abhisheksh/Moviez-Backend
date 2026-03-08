@@ -3,6 +3,7 @@ import dotenv from "dotenv"
 import authRoutes from "./routes/auth.route.js"
 import mediaRoutes from "./routes/media.route.js"
 import favouriteRoutes from "./routes/favourite.route.js"
+import historyRoutes from "./routes/history.route.js"
 
 dotenv.config()
 const app = express()
@@ -14,5 +15,6 @@ app.use(express.json())
 app.use("/api/v1/auth", authRoutes)
 app.use("/api/v1/media", mediaRoutes)
 app.use("/api/v1/favourite", favouriteRoutes)
+app.use("/api/v1/history", historyRoutes)
 
 export default app

@@ -1,4 +1,4 @@
-import { History } from "../models/history.model";
+import { History } from "../models/history.model.js";
 
 const addToHistory = async (req, res) => {
     try {
