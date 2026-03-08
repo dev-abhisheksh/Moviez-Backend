@@ -22,7 +22,17 @@ const userSchema = new mongoose.Schema({
     isBanned: {
         type: Boolean,
         default: false
-    }
+    },
+    banReason: {
+        type: String
+    },
+    banExpiresAt: {
+        type: Date
+    },
+    bannedAt: {
+        type: Date
+    },
+    
 }, { timestamps: true });
 
 export const User = mongoose.model("User", userSchema);
