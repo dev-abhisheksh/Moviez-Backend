@@ -227,11 +227,53 @@ const searchMedia = async (req, res) => {
     }
 };
 
+const getTrailer = async (req, res) => {
+    try {
+        const { mediaId, mediaType } = req.params;
+
+        if (!["movie", "tv"].includes(mediaType)) {
+            return res.status(400).json({ message: "Invalid media type" });
+        }
+
+        const endpoint = `https://api.themoviedb.org/3/${mediaType}/${mediaId}/videos`;
+
+        const response = await axios.get(endpoint, {
+            params: {
+                api_key: process.env.TMDB_API_KEY
+            }
+        });
+
+        const trailer = response.data.results.find(
+            (v) => v.type === "Trailer" && v.site === "YouTube"
+        );
+
+        if (!trailer) {
+            return res.status(404).json({
+                message: "Trailer not available"
+            });
+        }
+
+        return res.json({
+            key: trailer.key
+        });
+
+    } catch (error) {
+
+        if (error.response?.status === 404) {
+            return res.status(404).json({ message: "Media not found on TMDB" });
+        }
+
+        console.error("Trailer fetch error", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 export {
     createMedia, //Admin Onli
     updateMedia, //Admin only
     fetchMedias,
     getMediaById,
     deleteMedia, //Admin only - Soft delete (toggle)
-    searchMedia
+    searchMedia,
+    getTrailer
 };

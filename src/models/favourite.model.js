@@ -17,6 +17,6 @@ const favouriteSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-favouriteSchema.index({ userId: 1, mediaId: 1 });
+favouriteSchema.index({ userId: 1, mediaId: 1, mediaType: 1 }, { unique: true });
 
 export const Favourite = mongoose.model("Favourite", favouriteSchema);
