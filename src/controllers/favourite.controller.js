@@ -3,27 +3,35 @@ import { Favourite } from "../models/favourite.model";
 const toggleFavourite = async (req, res) => {
     try {
         const { mediaId, mediaType } = req.params;
-        const user = req.user;
-        if (!mediaId || !mediaType) return res.status(400).json({ message: "Media ID and type are required" });
+        const userId = req.user._id;
 
-        const existing = await Favourite.findOne({ userId: user._id, mediaId, mediaType });
+        if (!mediaId || !mediaType) {
+            return res.status(400).json({ message: "Media ID and type are required" });
+        }
+
+        if (!["movie", "tv"].includes(mediaType)) {
+            return res.status(400).json({ message: "Invalid media type" });
+        }
+
+        const existing = await Favourite.findOne({ userId, mediaId, mediaType });
 
         if (existing) {
-            await Favourite.deleteOne({ _id: existing._id });
+            await Favourite.deleteOne({ userId, mediaId, mediaType });
             return res.json({ message: "Removed from favourites" });
         }
 
-        const favourite = await Favourite.create({
-            userId: user._id,
-            mediaId,
-            mediaType
+        const favourite = await Favourite.create({ userId, mediaId, mediaType });
+
+        return res.status(201).json({
+            message: "Added to favourites",
+            favourite
         });
-        return res.json({ message: "Added to favourites", favourite });
+
     } catch (error) {
         console.error("Favourite error", error);
         return res.status(500).json({ message: "Internal server error" });
     }
-}
+};
 
 const getFavourites = async (req, res) => {
     try {
