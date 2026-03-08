@@ -18,35 +18,47 @@ const banUser = async (req, res) => {
         const { userId } = req.params;
         const { reason, durationHours } = req.body;
 
+        if (req.user._id.toString() === userId) {
+            return res.status(400).json({ message: "You cannot ban yourself" });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (targetUser.role === "admin") {
+            return res.status(403).json({ message: "Admins cannot be banned" });
+        }
+
         const banExpiresAt = durationHours
             ? new Date(Date.now() + durationHours * 60 * 60 * 1000)
             : null;
 
-        const user = await User.findByIdAndUpdate(
-            userId,
-            {
-                isBanned: true,
-                banReason: reason || "Violation of platform rules",
-                bannedAt: new Date(),
-                banExpiresAt
-            },
-            { new: true }
-        );
+        targetUser.isBanned = true;
+        targetUser.banReason = reason || "Violation of platform rules";
+        targetUser.bannedAt = new Date();
+        targetUser.banExpiresAt = banExpiresAt;
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
+        await targetUser.save();
+
+        const safeUser = targetUser.toObject();
+        delete safeUser.password;
 
         return res.json({
             message: "User banned successfully",
-            user
+            user: safeUser
         });
 
     } catch (error) {
+        console.error("Ban user error", error);
         return res.status(500).json({ message: "Internal server error" });
     }
 };
-
 export {
     getAllUsers,
     banUser
