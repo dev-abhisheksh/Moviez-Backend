@@ -1,16 +1,16 @@
 import mongoose from "mongoose";
 
 const mediaSchema = new mongoose.Schema({
-    title: { type: String, required: true },   // same as TMDB movie title
-    name: String,                               // for TV shows
+    title: { type: String, required: true },
+    name: String,
     media_type: { type: String, enum: ["movie", "tv"], required: true },
 
     overview: String,
     poster_path: String,
     backdrop_path: String,
 
-    release_date: Date,       // movies
-    first_air_date: Date,     // tv
+    release_date: Date,
+    first_air_date: Date,
 
     genre_ids: [Number],
 
@@ -19,7 +19,9 @@ const mediaSchema = new mongoose.Schema({
     vote_average: { type: Number, default: 0 },
     vote_count: { type: Number, default: 0 },
 
-    source: { type: String, default: "admin" } // helps frontend identify origin
+    source: { type: String, default: "admin" },
+
+    isDeleted: { type: Boolean, default: false }
 
 }, { timestamps: true });
 
