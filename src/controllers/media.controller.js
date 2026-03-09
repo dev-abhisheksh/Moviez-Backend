@@ -3,9 +3,16 @@ import { Media } from "../models/media.model.js";
 import cloudinary from "../configs/cloudinary.js";
 import axios from "axios";
 
+const extractYoutubeId = (url) => {
+    if (!url) return '';
+    // Match watch?v=ID, youtu.be/ID, embed/ID
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
+    return match ? match[1] : url; // return as-is if already an ID or unrecognised format
+};
+
 const createMedia = async (req, res) => {
     try {
-        const { title, name, media_type, overview, release_date, first_air_date, genre_ids } = req.body;
+        const { title, name, media_type, overview, release_date, first_air_date, genre_ids, trailer_url, vote_average } = req.body;
 
         if (!media_type) {
             return res.status(400).json({ message: "media_type is required" });
@@ -43,7 +50,9 @@ const createMedia = async (req, res) => {
             backdrop_path,
             release_date,
             first_air_date,
-            genre_ids: genres
+            genre_ids: genres,
+            trailer_url: extractYoutubeId(trailer_url),
+            vote_average: vote_average ? Number(vote_average) : 0
         });
 
         return res.status(201).json({
@@ -62,7 +71,7 @@ const createMedia = async (req, res) => {
 const updateMedia = async (req, res) => {
     try {
         const { mediaId } = req.params;
-        const { title, name, media_type, overview, release_date, first_air_date, genre_ids } = req.body;
+        const { title, name, media_type, overview, release_date, first_air_date, genre_ids, trailer_url, vote_average } = req.body;
         if (!mediaId) {
             return res.status(400).json({ message: "Media ID is required" });
         }
@@ -81,6 +90,8 @@ const updateMedia = async (req, res) => {
         existingMedia.release_date = release_date || existingMedia.release_date;
         existingMedia.first_air_date = first_air_date || existingMedia.first_air_date;
         existingMedia.genre_ids = genres;
+        if (trailer_url !== undefined) existingMedia.trailer_url = extractYoutubeId(trailer_url);
+        if (vote_average !== undefined) existingMedia.vote_average = Number(vote_average);
 
         if (req.files?.poster) {
             const posterUpload = await cloudinary.uploader.upload(
@@ -142,7 +153,8 @@ const getMediaById = async (req, res) => {
                 media: {
                     ...media.toObject(),
                     id: media._id,
-                    isAdmin: true
+                    isAdmin: true,
+                    trailer_url: media.trailer_url || ''
                 }
             });
         }
