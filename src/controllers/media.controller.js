@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Media } from "../models/media.model.js";
 import cloudinary from "../configs/cloudinary.js";
 import axios from "axios";
@@ -132,14 +133,54 @@ const getMediaById = async (req, res) => {
         const { mediaId } = req.params;
         if (!mediaId) return res.status(400).json({ message: "Media ID is required" });
 
-        const media = await Media.findOne({ _id: mediaId, isDeleted: false });
-        if (!media) return res.status(404).json({ message: "Media not found" });
+        // Check if it's a valid MongoDB ObjectId
+        if (mongoose.Types.ObjectId.isValid(mediaId) && mediaId.length === 24) {
+            const media = await Media.findOne({ _id: mediaId, isDeleted: false });
+            if (!media) return res.status(404).json({ message: "Media not found" });
+            return res.status(200).json({
+                message: "Media fetched successfully",
+                media: {
+                    ...media.toObject(),
+                    id: media._id,
+                    isAdmin: true
+                }
+            });
+        }
+
+        // Otherwise treat it as a TMDB ID
+        const tmdbResponse = await axios.get(
+            `https://api.themoviedb.org/3/movie/${mediaId}`,
+            { params: { api_key: process.env.TMDB_API_KEY } }
+        );
+
+        const tmdbMovie = tmdbResponse.data;
         return res.status(200).json({
             message: "Media fetched successfully",
-            media
+            media: {
+                id: tmdbMovie.id,
+                title: tmdbMovie.title || tmdbMovie.name,
+                name: tmdbMovie.name || tmdbMovie.title,
+                overview: tmdbMovie.overview,
+                poster_path: tmdbMovie.poster_path,
+                backdrop_path: tmdbMovie.backdrop_path,
+                media_type: tmdbMovie.media_type || "movie",
+                release_date: tmdbMovie.release_date,
+                first_air_date: tmdbMovie.first_air_date,
+                vote_average: tmdbMovie.vote_average,
+                vote_count: tmdbMovie.vote_count,
+                runtime: tmdbMovie.runtime,
+                tagline: tmdbMovie.tagline,
+                status: tmdbMovie.status,
+                genres: tmdbMovie.genres || [],
+                isAdmin: false
+            }
         });
+
     } catch (error) {
         console.error("Get media by ID error:", error);
+        if (error.response?.status === 404) {
+            return res.status(404).json({ message: "Media not found" });
+        }
         return res.status(500).json({ message: "Internal server error" });
     }
 }
@@ -168,7 +209,7 @@ const deleteMedia = async (req, res) => {
 
 const searchMedia = async (req, res) => {
     try {
-        const { q } = req.query;
+        const { q, page } = req.query;
 
         if (!q) {
             return res.status(400).json({ message: "Search query required" });
@@ -198,14 +239,14 @@ const searchMedia = async (req, res) => {
             isAdmin: true
         }));
 
-        // 2. Searchin data frot the TMDB API
+        // 2. Search data from the TMDB API
         const tmdbResponse = await axios.get(
             `https://api.themoviedb.org/3/search/multi`,
             {
                 params: {
                     api_key: process.env.TMDB_API_KEY,
                     query: q,
-                    page
+                    page: page || 1
                 }
             }
         );
@@ -268,6 +309,45 @@ const getTrailer = async (req, res) => {
     }
 };
 
+const getTrending = async (req, res) => {
+    try {
+        const { type } = req.params;
+
+        const tmdbResponse = await axios.get(
+            `https://api.themoviedb.org/3/trending/${type}/day`,
+            {
+                params: { api_key: process.env.TMDB_API_KEY }
+            }
+        );
+
+        const dbMedias = await Media.find({
+            media_type: type,
+            isDeleted: false
+        }).limit(5).sort({ createdAt: -1 });
+
+        const formattedDb = dbMedias.map(m => ({
+            id: m._id,
+            title: m.title || m.name,
+            poster_path: m.poster_path,
+            backdrop_path: m.backdrop_path,
+            vote_average: m.vote_average,
+            media_type: m.media_type,
+            isAdmin: true
+        }));
+
+        const results = [...formattedDb, ...tmdbResponse.data.results];
+
+        return res.status(200).json({
+            success: true,
+            results
+        });
+
+    } catch (error) {
+        console.error("Trending fetch error:", error);
+        return res.status(500).json({ message: "Failed to fetch trending" });
+    }
+};
+
 export {
     createMedia, //Admin Onli
     updateMedia, //Admin only
@@ -275,5 +355,6 @@ export {
     getMediaById,
     deleteMedia, //Admin only - Soft delete (toggle)
     searchMedia,
-    getTrailer
+    getTrailer,
+    getTrending
 };

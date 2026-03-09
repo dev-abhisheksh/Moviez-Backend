@@ -15,6 +15,9 @@ const historySchema = new mongoose.Schema({
         enum: ["movie", "tv"],
         required: true
     },
+    // Store basic metadata so we can display history items without re-fetching
+    title: String,
+    poster_path: String,
     watchedAt: {
         type: Date,
         default: Date.now

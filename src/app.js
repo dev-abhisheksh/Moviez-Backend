@@ -1,5 +1,6 @@
 import express from "express"
 import dotenv from "dotenv"
+import cors from "cors"
 import authRoutes from "./routes/auth.route.js"
 import mediaRoutes from "./routes/media.route.js"
 import favouriteRoutes from "./routes/favourite.route.js"
@@ -11,6 +12,14 @@ const app = express()
 
 // Middleware
 app.use(express.json())
+
+
+app.use(
+    cors({
+        origin: "http://localhost:5173", // your React dev server
+        credentials: true,
+    })
+);
 
 // Routes
 app.use("/api/v1/auth", authRoutes)

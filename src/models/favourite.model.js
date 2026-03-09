@@ -14,7 +14,12 @@ const favouriteSchema = new mongoose.Schema({
         type: String,
         enum: ["movie", "tv"],
         required: true
-    }
+    },
+    // Store metadata so My List page can render without re-fetching
+    title: String,
+    poster_path: String,
+    vote_average: Number,
+    isAdmin: { type: Boolean, default: false }
 }, { timestamps: true });
 
 favouriteSchema.index({ userId: 1, mediaId: 1, mediaType: 1 }, { unique: true });
