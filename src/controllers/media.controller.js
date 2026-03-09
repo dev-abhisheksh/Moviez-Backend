@@ -348,6 +348,36 @@ const getTrending = async (req, res) => {
     }
 };
 
+const getCredits = async (req, res) => {
+    try {
+        const { mediaType, mediaId } = req.params;
+
+        if (!["movie", "tv"].includes(mediaType)) {
+            return res.status(400).json({ message: "Invalid media type" });
+        }
+
+        const response = await axios.get(
+            `https://api.themoviedb.org/3/${mediaType}/${mediaId}/credits`,
+            { params: { api_key: process.env.TMDB_API_KEY } }
+        );
+
+        const cast = (response.data.cast || []).slice(0, 12).map((actor) => ({
+            id: actor.id,
+            name: actor.name,
+            character: actor.character,
+            profile_path: actor.profile_path,
+        }));
+
+        return res.json({ cast });
+    } catch (error) {
+        if (error.response?.status === 404) {
+            return res.status(404).json({ message: "Credits not found" });
+        }
+        console.error("Credits fetch error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 export {
     createMedia, //Admin Onli
     updateMedia, //Admin only
@@ -356,5 +386,6 @@ export {
     deleteMedia, //Admin only - Soft delete (toggle)
     searchMedia,
     getTrailer,
-    getTrending
+    getTrending,
+    getCredits
 };
