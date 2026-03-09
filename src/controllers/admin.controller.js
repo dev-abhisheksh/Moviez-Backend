@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 
 const getAllUsers = async (req, res) => {
@@ -59,7 +60,38 @@ const banUser = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 };
+const deleteUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (req.user._id.toString() === userId) {
+            return res.status(400).json({ message: "You cannot delete yourself" });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (targetUser.role === "admin") {
+            return res.status(403).json({ message: "Admins cannot be deleted" });
+        }
+
+        await User.findByIdAndDelete(userId);
+
+        return res.json({ message: "User deleted successfully" });
+    } catch (error) {
+        console.error("Delete user error", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 export {
     getAllUsers,
-    banUser
+    banUser,
+    deleteUser
 }
