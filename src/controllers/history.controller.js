@@ -99,8 +99,20 @@ const removeFromHistory = async (req, res) => {
     }
 }
 
+const clearAllHistory = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const result = await History.deleteMany({ userId });
+        return res.json({ message: "All history cleared", deletedCount: result.deletedCount });
+    } catch (error) {
+        console.error("Clear all history error", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+
 export {
     addToHistory,
     getWatchHistory,
-    removeFromHistory
+    removeFromHistory,
+    clearAllHistory
 }
