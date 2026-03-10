@@ -17,5 +17,5 @@ router.get("/trailer/:mediaType/:mediaId", verifyToken, getTrailer);
 router.get("/trending/:type", verifyToken, getTrending);
 router.get("/credits/:mediaType/:mediaId", verifyToken, getCredits);
 
-router.get("/:mediaId", verifyToken, getMediaById);
+router.get("/:mediaType/:mediaId", verifyToken, getMediaById);
 export default router;

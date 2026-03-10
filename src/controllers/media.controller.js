@@ -141,11 +141,15 @@ const fetchMedias = async (req, res) => {
 
 const getMediaById = async (req, res) => {
     try {
-        const { mediaId } = req.params;
+        const { mediaId, mediaType } = req.params;
         if (!mediaId) return res.status(400).json({ message: "Media ID is required" });
 
-        // Check if it's a valid MongoDB ObjectId
-        if (mongoose.Types.ObjectId.isValid(mediaId) && mediaId.length === 24) {
+        // Validate mediaType
+        const validTypes = ['movie', 'tv', 'admin'];
+        const type = validTypes.includes(mediaType) ? mediaType : 'movie';
+
+        // Admin content: fetch from MongoDB
+        if (type === 'admin' || (mongoose.Types.ObjectId.isValid(mediaId) && mediaId.length === 24)) {
             const media = await Media.findOne({ _id: mediaId, isDeleted: false });
             if (!media) return res.status(404).json({ message: "Media not found" });
             return res.status(200).json({
@@ -159,31 +163,39 @@ const getMediaById = async (req, res) => {
             });
         }
 
-        // Otherwise treat it as a TMDB ID
+        // TMDB content: use the correct type endpoint
         const tmdbResponse = await axios.get(
-            `https://api.themoviedb.org/3/movie/${mediaId}`,
+            `https://api.themoviedb.org/3/${type}/${mediaId}`,
             { params: { api_key: process.env.TMDB_API_KEY } }
         );
 
-        const tmdbMovie = tmdbResponse.data;
+        const tmdbData = tmdbResponse.data;
+
+        // Validate that the returned ID matches what was requested
+        if (String(tmdbData.id) !== String(mediaId)) {
+            return res.status(404).json({ message: "Media not found — ID mismatch" });
+        }
+
         return res.status(200).json({
             message: "Media fetched successfully",
             media: {
-                id: tmdbMovie.id,
-                title: tmdbMovie.title || tmdbMovie.name,
-                name: tmdbMovie.name || tmdbMovie.title,
-                overview: tmdbMovie.overview,
-                poster_path: tmdbMovie.poster_path,
-                backdrop_path: tmdbMovie.backdrop_path,
-                media_type: tmdbMovie.media_type || "movie",
-                release_date: tmdbMovie.release_date,
-                first_air_date: tmdbMovie.first_air_date,
-                vote_average: tmdbMovie.vote_average,
-                vote_count: tmdbMovie.vote_count,
-                runtime: tmdbMovie.runtime,
-                tagline: tmdbMovie.tagline,
-                status: tmdbMovie.status,
-                genres: tmdbMovie.genres || [],
+                id: tmdbData.id,
+                title: tmdbData.title || tmdbData.name,
+                name: tmdbData.name || tmdbData.title,
+                overview: tmdbData.overview,
+                poster_path: tmdbData.poster_path,
+                backdrop_path: tmdbData.backdrop_path,
+                media_type: type,
+                release_date: tmdbData.release_date,
+                first_air_date: tmdbData.first_air_date,
+                vote_average: tmdbData.vote_average,
+                vote_count: tmdbData.vote_count,
+                runtime: tmdbData.runtime || tmdbData.episode_run_time?.[0],
+                tagline: tmdbData.tagline,
+                status: tmdbData.status,
+                genres: tmdbData.genres || [],
+                number_of_seasons: tmdbData.number_of_seasons,
+                number_of_episodes: tmdbData.number_of_episodes,
                 isAdmin: false
             }
         });
