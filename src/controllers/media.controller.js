@@ -402,6 +402,68 @@ const getCredits = async (req, res) => {
     }
 };
 
+const getRecommendations = async (req, res) => {
+    try {
+        const { mediaType, mediaId } = req.params;
+
+        if (!["movie", "tv"].includes(mediaType)) {
+            return res.status(400).json({ message: "Invalid media type" });
+        }
+
+        // Try TMDB recommendations first (based on audience behavior & metadata)
+        let results = [];
+        try {
+            const recResponse = await axios.get(
+                `https://api.themoviedb.org/3/${mediaType}/${mediaId}/recommendations`,
+                { params: { api_key: process.env.TMDB_API_KEY, page: 1 } }
+            );
+            results = recResponse.data.results || [];
+        } catch (err) {
+            console.warn("Recommendations endpoint failed, trying similar:", err.message);
+        }
+
+        // Fallback to TMDB "similar" if recommendations are empty
+        if (results.length === 0) {
+            try {
+                const simResponse = await axios.get(
+                    `https://api.themoviedb.org/3/${mediaType}/${mediaId}/similar`,
+                    { params: { api_key: process.env.TMDB_API_KEY, page: 1 } }
+                );
+                results = simResponse.data.results || [];
+            } catch (err) {
+                console.warn("Similar endpoint also failed:", err.message);
+            }
+        }
+
+        // Format and filter: only items with poster & decent rating
+        const formatted = results
+            .filter(item => item.poster_path && (item.vote_average || 0) > 0)
+            .slice(0, 20)
+            .map(item => ({
+                id: item.id,
+                title: item.title || item.name,
+                name: item.name || item.title,
+                overview: item.overview,
+                poster_path: item.poster_path,
+                backdrop_path: item.backdrop_path,
+                media_type: mediaType,
+                release_date: item.release_date || item.first_air_date,
+                vote_average: item.vote_average,
+                genre_ids: item.genre_ids || [],
+                isAdmin: false
+            }));
+
+        return res.status(200).json({
+            success: true,
+            results: formatted
+        });
+
+    } catch (error) {
+        console.error("Recommendations fetch error:", error);
+        return res.status(500).json({ message: "Failed to fetch recommendations" });
+    }
+};
+
 export {
     createMedia, //Admin Onli
     updateMedia, //Admin only
@@ -411,5 +473,6 @@ export {
     searchMedia,
     getTrailer,
     getTrending,
-    getCredits
+    getCredits,
+    getRecommendations
 };
