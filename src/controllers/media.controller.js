@@ -464,6 +464,55 @@ const getRecommendations = async (req, res) => {
     }
 };
 
+const getAiringAnime = async (req, res) => {
+    try {
+        const { page } = req.query;
+
+        // Use TMDB discover to find currently airing Japanese animation
+        const tmdbResponse = await axios.get(
+            'https://api.themoviedb.org/3/discover/tv',
+            {
+                params: {
+                    api_key: process.env.TMDB_API_KEY,
+                    with_genres: 16,                    // Animation genre
+                    with_original_language: 'ja',       // Japanese
+                    sort_by: 'popularity.desc',
+                    'air_date.gte': new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
+                    with_status: '0',                   // Returning series
+                    page: page || 1,
+                }
+            }
+        );
+
+        const results = (tmdbResponse.data.results || []).map(item => ({
+            id: item.id,
+            title: item.name,
+            name: item.name,
+            overview: item.overview,
+            poster_path: item.poster_path,
+            backdrop_path: item.backdrop_path,
+            media_type: 'tv',
+            release_date: item.first_air_date,
+            first_air_date: item.first_air_date,
+            vote_average: item.vote_average,
+            vote_count: item.vote_count,
+            genre_ids: item.genre_ids || [],
+            isAdmin: false,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            results,
+            total_pages: tmdbResponse.data.total_pages,
+            total_results: tmdbResponse.data.total_results,
+        });
+
+    } catch (error) {
+        console.error("Airing anime fetch error:", error);
+        return res.status(500).json({ message: "Failed to fetch airing anime" });
+    }
+};
+
 export {
     createMedia, //Admin Onli
     updateMedia, //Admin only
@@ -474,5 +523,6 @@ export {
     getTrailer,
     getTrending,
     getCredits,
-    getRecommendations
+    getRecommendations,
+    getAiringAnime
 };
