@@ -196,6 +196,15 @@ const getMediaById = async (req, res) => {
                 genres: tmdbData.genres || [],
                 number_of_seasons: tmdbData.number_of_seasons,
                 number_of_episodes: tmdbData.number_of_episodes,
+                seasons: (tmdbData.seasons || []).filter(s => s.season_number > 0).map(s => ({
+                    id: s.id,
+                    name: s.name,
+                    season_number: s.season_number,
+                    episode_count: s.episode_count,
+                    air_date: s.air_date,
+                    poster_path: s.poster_path,
+                    overview: s.overview,
+                })),
                 isAdmin: false
             }
         });
@@ -513,6 +522,42 @@ const getAiringAnime = async (req, res) => {
     }
 };
 
+const getSeasonEpisodes = async (req, res) => {
+    try {
+        const { tvId, seasonNumber } = req.params;
+
+        const response = await axios.get(
+            `https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}`,
+            { params: { api_key: process.env.TMDB_API_KEY } }
+        );
+
+        const episodes = (response.data.episodes || []).map(ep => ({
+            id: ep.id,
+            name: ep.name,
+            episode_number: ep.episode_number,
+            season_number: ep.season_number,
+            overview: ep.overview,
+            still_path: ep.still_path,
+            air_date: ep.air_date,
+            runtime: ep.runtime,
+            vote_average: ep.vote_average,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            season_number: response.data.season_number,
+            name: response.data.name,
+            episodes,
+        });
+    } catch (error) {
+        console.error("Season episodes fetch error:", error);
+        if (error.response?.status === 404) {
+            return res.status(404).json({ message: "Season not found" });
+        }
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 export {
     createMedia, //Admin Onli
     updateMedia, //Admin only
@@ -524,5 +569,6 @@ export {
     getTrending,
     getCredits,
     getRecommendations,
-    getAiringAnime
+    getAiringAnime,
+    getSeasonEpisodes
 };
