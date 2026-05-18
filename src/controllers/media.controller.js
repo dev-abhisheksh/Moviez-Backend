@@ -558,6 +558,60 @@ const getSeasonEpisodes = async (req, res) => {
     }
 };
 
+const discoverByGenre = async (req, res) => {
+    try {
+        const { genres, type = 'movie', page = 1, sort = 'popularity.desc' } = req.query;
+
+        if (!genres) {
+            return res.status(400).json({ message: "At least one genre ID is required" });
+        }
+
+        const validTypes = ['movie', 'tv'];
+        const mediaType = validTypes.includes(type) ? type : 'movie';
+
+        const tmdbResponse = await axios.get(
+            `https://api.themoviedb.org/3/discover/${mediaType}`,
+            {
+                params: {
+                    api_key: process.env.TMDB_API_KEY,
+                    with_genres: genres, // comma-separated genre IDs
+                    sort_by: sort,
+                    page,
+                    'vote_count.gte': 10,
+                    include_adult: false,
+                }
+            }
+        );
+
+        const results = (tmdbResponse.data.results || []).map(item => ({
+            id: item.id,
+            title: item.title || item.name,
+            name: item.name || item.title,
+            overview: item.overview,
+            poster_path: item.poster_path,
+            backdrop_path: item.backdrop_path,
+            media_type: mediaType,
+            release_date: item.release_date || item.first_air_date,
+            first_air_date: item.first_air_date,
+            vote_average: item.vote_average,
+            vote_count: item.vote_count,
+            genre_ids: item.genre_ids || [],
+            isAdmin: false,
+        }));
+
+        return res.status(200).json({
+            success: true,
+            results,
+            page: tmdbResponse.data.page,
+            total_pages: tmdbResponse.data.total_pages,
+            total_results: tmdbResponse.data.total_results,
+        });
+    } catch (error) {
+        console.error("Discover by genre error:", error);
+        return res.status(500).json({ message: "Failed to discover media by genre" });
+    }
+};
+
 export {
     createMedia, //Admin Onli
     updateMedia, //Admin only
@@ -570,5 +624,6 @@ export {
     getCredits,
     getRecommendations,
     getAiringAnime,
-    getSeasonEpisodes
+    getSeasonEpisodes,
+    discoverByGenre
 };

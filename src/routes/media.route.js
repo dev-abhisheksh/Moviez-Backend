@@ -2,7 +2,7 @@ import express from "express";
 import verifyToken from "../middlewares/auth.middleware.js";
 import authorizeRoles from "../middlewares/roles.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
-import { createMedia, deleteMedia, fetchMedias, getCredits, getMediaById, getRecommendations, getTrailer, getTrending, searchMedia, updateMedia, getAiringAnime, getSeasonEpisodes } from "../controllers/media.controller.js";
+import { createMedia, deleteMedia, fetchMedias, getCredits, getMediaById, getRecommendations, getTrailer, getTrending, searchMedia, updateMedia, getAiringAnime, getSeasonEpisodes, discoverByGenre } from "../controllers/media.controller.js";
 
 const router = express.Router();
 
@@ -19,6 +19,7 @@ router.get("/credits/:mediaType/:mediaId", verifyToken, getCredits);
 router.get("/recommendations/:mediaType/:mediaId", verifyToken, getRecommendations);
 router.get("/anime/airing", verifyToken, getAiringAnime);
 router.get("/tv/:tvId/season/:seasonNumber", verifyToken, getSeasonEpisodes);
+router.get("/discover", verifyToken, discoverByGenre);
 
 router.get("/:mediaType/:mediaId", verifyToken, getMediaById);
 export default router;
