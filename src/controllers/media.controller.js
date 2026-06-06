@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { Media } from "../models/media.model.js";
 import cloudinary from "../configs/cloudinary.js";
-import axios from "axios";
+import tmdbApi from "../configs/tmdb.js";
 
 const extractYoutubeId = (url) => {
     if (!url) return '';
@@ -164,10 +164,7 @@ const getMediaById = async (req, res) => {
         }
 
         // TMDB content: use the correct type endpoint
-        const tmdbResponse = await axios.get(
-            `https://api.themoviedb.org/3/${type}/${mediaId}`,
-            { params: { api_key: process.env.TMDB_API_KEY } }
-        );
+        const tmdbResponse = await tmdbApi.get(`/${type}/${mediaId}`);
 
         const tmdbData = tmdbResponse.data;
 
@@ -273,16 +270,12 @@ const searchMedia = async (req, res) => {
         }));
 
         // 2. Search data from the TMDB API
-        const tmdbResponse = await axios.get(
-            `https://api.themoviedb.org/3/search/multi`,
-            {
-                params: {
-                    api_key: process.env.TMDB_API_KEY,
-                    query: q,
-                    page: page || 1
-                }
+        const tmdbResponse = await tmdbApi.get(`/search/multi`, {
+            params: {
+                query: q,
+                page: page || 1
             }
-        );
+        });
 
         const tmdbResults = tmdbResponse.data.results.slice(0, 10);
 
@@ -309,13 +302,7 @@ const getTrailer = async (req, res) => {
             return res.status(400).json({ message: "Invalid media type" });
         }
 
-        const endpoint = `https://api.themoviedb.org/3/${mediaType}/${mediaId}/videos`;
-
-        const response = await axios.get(endpoint, {
-            params: {
-                api_key: process.env.TMDB_API_KEY
-            }
-        });
+        const response = await tmdbApi.get(`/${mediaType}/${mediaId}/videos`);
 
         const trailer = response.data.results.find(
             (v) => v.type === "Trailer" && v.site === "YouTube"
@@ -346,12 +333,7 @@ const getTrending = async (req, res) => {
     try {
         const { type } = req.params;
 
-        const tmdbResponse = await axios.get(
-            `https://api.themoviedb.org/3/trending/${type}/day`,
-            {
-                params: { api_key: process.env.TMDB_API_KEY }
-            }
-        );
+        const tmdbResponse = await tmdbApi.get(`/trending/${type}/day`);
 
         const dbMedias = await Media.find({
             media_type: type,
@@ -389,10 +371,7 @@ const getCredits = async (req, res) => {
             return res.status(400).json({ message: "Invalid media type" });
         }
 
-        const response = await axios.get(
-            `https://api.themoviedb.org/3/${mediaType}/${mediaId}/credits`,
-            { params: { api_key: process.env.TMDB_API_KEY } }
-        );
+        const response = await tmdbApi.get(`/${mediaType}/${mediaId}/credits`);
 
         const cast = (response.data.cast || []).slice(0, 12).map((actor) => ({
             id: actor.id,
@@ -422,10 +401,7 @@ const getRecommendations = async (req, res) => {
         // Try TMDB recommendations first (based on audience behavior & metadata)
         let results = [];
         try {
-            const recResponse = await axios.get(
-                `https://api.themoviedb.org/3/${mediaType}/${mediaId}/recommendations`,
-                { params: { api_key: process.env.TMDB_API_KEY, page: 1 } }
-            );
+            const recResponse = await tmdbApi.get(`/${mediaType}/${mediaId}/recommendations`, { params: { page: 1 } });
             results = recResponse.data.results || [];
         } catch (err) {
             console.warn("Recommendations endpoint failed, trying similar:", err.message);
@@ -434,10 +410,7 @@ const getRecommendations = async (req, res) => {
         // Fallback to TMDB "similar" if recommendations are empty
         if (results.length === 0) {
             try {
-                const simResponse = await axios.get(
-                    `https://api.themoviedb.org/3/${mediaType}/${mediaId}/similar`,
-                    { params: { api_key: process.env.TMDB_API_KEY, page: 1 } }
-                );
+                const simResponse = await tmdbApi.get(`/${mediaType}/${mediaId}/similar`, { params: { page: 1 } });
                 results = simResponse.data.results || [];
             } catch (err) {
                 console.warn("Similar endpoint also failed:", err.message);
@@ -478,20 +451,16 @@ const getAiringAnime = async (req, res) => {
         const { page } = req.query;
 
         // Use TMDB discover to find currently airing Japanese animation
-        const tmdbResponse = await axios.get(
-            'https://api.themoviedb.org/3/discover/tv',
-            {
-                params: {
-                    api_key: process.env.TMDB_API_KEY,
-                    with_genres: 16,                    // Animation genre
-                    with_original_language: 'ja',       // Japanese
-                    sort_by: 'popularity.desc',
-                    'air_date.gte': new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
-                    with_status: '0',                   // Returning series
-                    page: page || 1,
-                }
+        const tmdbResponse = await tmdbApi.get('/discover/tv', {
+            params: {
+                with_genres: 16,                    // Animation genre
+                with_original_language: 'ja',       // Japanese
+                sort_by: 'popularity.desc',
+                'air_date.gte': new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
+                with_status: '0',                   // Returning series
+                page: page || 1,
             }
-        );
+        });
 
         const results = (tmdbResponse.data.results || []).map(item => ({
             id: item.id,
@@ -526,10 +495,7 @@ const getSeasonEpisodes = async (req, res) => {
     try {
         const { tvId, seasonNumber } = req.params;
 
-        const response = await axios.get(
-            `https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}`,
-            { params: { api_key: process.env.TMDB_API_KEY } }
-        );
+        const response = await tmdbApi.get(`/tv/${tvId}/season/${seasonNumber}`);
 
         const episodes = (response.data.episodes || []).map(ep => ({
             id: ep.id,
@@ -569,19 +535,15 @@ const discoverByGenre = async (req, res) => {
         const validTypes = ['movie', 'tv'];
         const mediaType = validTypes.includes(type) ? type : 'movie';
 
-        const tmdbResponse = await axios.get(
-            `https://api.themoviedb.org/3/discover/${mediaType}`,
-            {
-                params: {
-                    api_key: process.env.TMDB_API_KEY,
-                    with_genres: genres, // comma-separated genre IDs
-                    sort_by: sort,
-                    page,
-                    'vote_count.gte': 10,
-                    include_adult: false,
-                }
+        const tmdbResponse = await tmdbApi.get(`/discover/${mediaType}`, {
+            params: {
+                with_genres: genres, // comma-separated genre IDs
+                sort_by: sort,
+                page,
+                'vote_count.gte': 10,
+                include_adult: false,
             }
-        );
+        });
 
         const results = (tmdbResponse.data.results || []).map(item => ({
             id: item.id,

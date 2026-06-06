@@ -1,7 +1,7 @@
 import { History } from "../models/history.model.js";
-import axios from "axios";
 import mongoose from "mongoose";
 import { Media } from "../models/media.model.js";
+import tmdbApi from "../configs/tmdb.js";
 
 const addToHistory = async (req, res) => {
     try {
@@ -31,10 +31,7 @@ const addToHistory = async (req, res) => {
         } else {
             // It's a TMDB ID — fetch basic info from TMDB
             try {
-                const tmdbRes = await axios.get(
-                    `https://api.themoviedb.org/3/${mediaType}/${mediaId}`,
-                    { params: { api_key: process.env.TMDB_API_KEY } }
-                );
+                const tmdbRes = await tmdbApi.get(`/${mediaType}/${mediaId}`);
                 title = tmdbRes.data.title || tmdbRes.data.name || "";
                 poster_path = tmdbRes.data.poster_path || "";
             } catch (tmdbErr) {

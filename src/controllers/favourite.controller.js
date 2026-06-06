@@ -1,7 +1,7 @@
 import { Favourite } from "../models/favourite.model.js";
-import axios from "axios";
 import mongoose from "mongoose";
 import { Media } from "../models/media.model.js";
+import tmdbApi from "../configs/tmdb.js";
 
 const toggleFavourite = async (req, res) => {
     try {
@@ -45,10 +45,7 @@ const toggleFavourite = async (req, res) => {
         } else {
             // It's a TMDB ID — fetch basic info
             try {
-                const tmdbRes = await axios.get(
-                    `https://api.themoviedb.org/3/${mediaType}/${mediaIdStr}`,
-                    { params: { api_key: process.env.TMDB_API_KEY } }
-                );
+                const tmdbRes = await tmdbApi.get(`/${mediaType}/${mediaIdStr}`);
                 title = tmdbRes.data.title || tmdbRes.data.name || "";
                 poster_path = tmdbRes.data.poster_path || "";
                 vote_average = tmdbRes.data.vote_average || 0;
